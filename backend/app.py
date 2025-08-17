@@ -11,15 +11,15 @@ app = Flask(__name__)
 
 # Get MongoDB URI from environment variables
 MONGO_URI = os.getenv("MONGO_URI")
-# Initialize MongoClient
 client = MongoClient(MONGO_URI)
-# Select the database named 'test'
+
+# Databases & Collections
 db = client.test
-# Select the collection named 'database1' within the 'test' database
-collection = db.database1
+collection = db.database1     # For /submit route
+todos = db.todos              # For /submittodoitem route
 
 
-# Route for handling form submissions
+# Route 1: Handle form submissions
 @app.route('/submit', methods=['POST'])
 def submit_data():
     try:
@@ -28,13 +28,33 @@ def submit_data():
 
         print(f"Received: name={name}, email={email}")
 
-        if not name and not email:
+        # Validation (fix: use OR instead of AND)
+        if not name or not email:
             return jsonify({'error': 'Both fields are required'}), 400
 
         result = collection.insert_one({'name': name, 'email': email})
         print(f"Inserted ID: {result.inserted_id}")
 
         return jsonify({'message': 'Data submitted successfully'}), 200
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Route 2: Handle To-Do submissions
+@app.route("/submittodoitem", methods=["POST"])
+def submit_todo_item():
+    try:
+        data = request.get_json()
+        itemName = data.get("itemName")
+        itemDescription = data.get("itemDescription")
+
+        if not itemName or not itemDescription:
+            return jsonify({"error": "Both fields are required"}), 400
+
+        todos.insert_one({"itemName": itemName, "itemDescription": itemDescription})
+        return jsonify({"message": "To-Do Item saved successfully!"}), 201
 
     except Exception as e:
         print(f"Error: {e}")
